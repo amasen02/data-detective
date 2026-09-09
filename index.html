@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Data Detective — Can You Trust This Claim?</title>
+<style>
+:root{
+  --bg:#0f1220;--panel:#181c2f;--panel2:#1f2440;--ink:#e8ecf8;--muted:#9aa3c0;
+  --accent:#5eead4;--accent2:#818cf8;--warn:#fbbf24;--bad:#f87171;--good:#34d399;
+  --line:#2a3054;--radius:14px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);font-family:Georgia,'Times New Roman',serif;line-height:1.55}
+body.reduced *{animation:none!important;transition:none!important}
+h1,h2,h3,.ui{font-family:Verdana,Arial,sans-serif}
+.wrap{max-width:1060px;margin:0 auto;padding:18px 20px 80px}
+header{background:linear-gradient(135deg,#141935,#0f1220);border-bottom:1px solid var(--line);padding:26px 0 18px;margin-bottom:22px}
+header h1{margin:0 0 6px;font-size:clamp(22px,4vw,34px);letter-spacing:.5px}
+header .tag{color:var(--muted);font-size:14px}
+.badge{display:inline-block;background:#123a34;color:var(--accent);border:1px solid var(--accent);border-radius:999px;padding:2px 10px;font-size:12px;font-family:Verdana,sans-serif;margin-left:8px;vertical-align:middle}
+nav{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0 4px}
+nav button{flex:1 1 150px;min-height:44px}
+.btn{font-family:Verdana,Arial,sans-serif;background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:10px 14px;font-size:14px;cursor:pointer;min-height:44px}
+.btn:hover{border-color:var(--accent)}
+.btn:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,[tabindex]:focus-visible{outline:3px solid var(--warn);outline-offset:2px}
+.btn.primary{background:var(--accent);color:#08302a;border-color:var(--accent);font-weight:700}
+.btn.ghost{background:transparent}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+section.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:20px 22px;margin:16px 0}
+section.card h2{margin-top:0;font-size:20px}
+.panel{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:14px;margin:12px 0}
+.lead{font-size:17px}
+.muted{color:var(--muted)}
+.small{font-size:13px}
+.center{text-align:center}
+.row{display:flex;gap:14px;flex-wrap:wrap}
+.row>*{flex:1 1 260px}
+input[type=range]{width:100%;min-height:44px;accent-color:var(--accent2)}
+.chartbox{background:#0b0e1b;border:1px solid var(--line);border-radius:10px;padding:8px;margin:10px 0}
+canvas{width:100%;height:auto;display:block}
+table.data{width:100%;border-collapse:collapse;font-family:Verdana,sans-serif;font-size:12.5px;margin:10px 0}
+table.data th,table.data td{border:1px solid var(--line);padding:6px 8px;text-align:right}
+table.data th:first-child,table.data td:first-child{text-align:left}
+table.data th{background:#131833;color:var(--muted)}
+.feedback{border-left:4px solid var(--accent);background:#12202b;padding:10px 14px;border-radius:0 8px 8px 0;margin:10px 0;min-height:20px}
+.feedback.ok{border-color:var(--good)}
+.feedback.no{border-color:var(--bad)}
+.feedback.hint{border-color:var(--warn)}
+.chip{display:inline-block;background:#232a4d;border:1px solid var(--line);border-radius:8px;padding:3px 9px;margin:2px;font-size:12.5px;font-family:Verdana,sans-serif}
+.chip.sel{background:var(--accent);color:#073b32;font-weight:700;border-color:var(--accent)}
+.notebook{background:#0d1322;border:1px dashed #3b4370;border-radius:10px;padding:12px 14px;min-height:60px}
+.notebook ul{margin:6px 0;padding-left:20px}
+.notebook li{margin:3px 0}
+.prog{display:flex;gap:6px;margin:10px 0}
+.prog span{flex:1;height:8px;border-radius:6px;background:#232a4d;border:1px solid var(--line)}
+.prog span.done{background:var(--good)}
+.prog span.cur{background:var(--warn)}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:14px}
+.kv dt{color:var(--muted)}
+.kv dd{margin:0}
+textarea{width:100%;min-height:90px;background:#0b0e1b;color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:10px;font-family:Georgia,serif;font-size:15px}
+.checklist label{display:block;margin:6px 0;min-height:32px}
+footer{margin-top:34px;padding-top:14px;border-top:1px solid var(--line);color:var(--muted);font-size:12.5px}
+footer a{color:var(--accent2)}
+.hidden{display:none}
+@media (max-width:760px){ section.card{padding:16px} .row>*{flex:1 1 100%} }
+@media (prefers-reduced-motion:reduce){ *{animation:none!important;transition:none!important} }
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <h1>Data Detective <span class="badge">Case File #15</span></h1>
+    <p class="tag">Can you trust this claim? A 10–15 minute investigation into how numbers get framed — for curious minds ~15 and up.</p>
+    <nav aria-label="Lesson activities">
+      <button class="btn" id="navHome" onclick="go('home')">1 · Briefing</button>
+      <button class="btn" id="navG1" onclick="go('g1')">2 · The Graph Gambit</button>
+      <button class="btn" id="navG2" onclick="go('g2')">3 · Sampling Sleuth</button>
+      <button class="btn" id="navG3" onclick="go('g3')">4 · Cause or Coincidence?</button>
+      <button class="btn" id="navFin" onclick="go('fin')">5 · Verdict</button>
+    </nav>
+    <div class="prog" aria-hidden="true"><span id="p0"></span><span id="p1"></span><span id="p2"></span><span id="p3"></span><span id="p4"></span></div>
+  </div>
+</header>
+<main class="wrap">
+
+<!-- ============ HOME ============ -->
+<section class="card" id="view-home" aria-labelledby="h0">
+  <h2 id="h0">Detective's Briefing</h2>
+  <p class="lead">A news alert flashes on your screen:</p>
+  <div class="panel" style="border-left:4px solid var(--warn)">
+    <p><b>“TEEN SCREEN TIME EXPLODES — city teens' daily screen hours DOUBLED in eight weeks, new survey shows.”</p>
+    <p class="small muted">— The Daily Byte (fictional newspaper), Week 8 of the Metropolis Youth Study (fictional study)</p>
+  </div>
+  <p>Your job is not to decide "true or false" in one bite. Real detectives check <b>how the number was made</b>: how the picture was drawn, <b>who was asked</b>, and <b>what else moved</b> alongside it. You'll practice three moves today:</p>
+  <ul>
+    <li><b>The Graph Gambit</b> — how axis choices change the <i>look</i> of the same numbers.</li>
+    <li><b>Sampling Sleuth</b> — why <i>who you ask</i> can bend an answer more than <i>how many</i> you ask.</li>
+    <li><b>Cause or Coincidence?</b> — two things rising together, and the sneaky third thing behind them.</li>
+  </ul>
+  <p>Everything here is <b>fictional and synthetic</b> — invented people, invented city, invented study. Any resemblance to real debates is the point, not the evidence.</p>
+  <div class="panel">
+    <b>How this works:</b> progress saves automatically in this browser; nothing leaves your device, no account needed.
+    <div class="row" style="margin-top:10px">
+      <button class="btn primary" onclick="go('g1')">Start investigating →</button>
+      <button class="btn ghost" onclick="resetAll()">Reset all progress</button>
+    </div>
+  </div>
+  <p class="small muted">Prerequisites: can read a simple table and a bar chart. Time: ~12 minutes. If anything looks off, every activity has a Hint button and unlimited retries — mistakes are evidence too.</p>
+</section>
+
+<!-- ============ ACTIVITY 1: GRAPH FRAMING ============ -->
+<section class="card hidden" id="view-g1" aria-labelledby="h1">
+  <h2 id="h1">Activity 1 · The Graph Gambit</h2>
+  <p>The Daily Byte printed two charts from the same survey numbers. Same data — very different <i>feeling</i>. Drag the axis range yourself and watch what changes… and what never does.</p>
+
+  <div class="panel">
+    <label for="axisSlider"><b>Vertical axis top value:</b> <output id="axisOut" for="axisSlider">6</output> hours</label>
+    <input type="range" id="axisSlider" min="2" max="12" step="0.5" value="6" oninput="drawA1()" aria-describedby="axisHelp">
+    <p class="small muted" id="axisHelp">Drag to set the top of the vertical axis. Watch both charts redraw from the same numbers.</p>
+    <div class="row">
+      <div>
+        <p class="small center"><b>Chart A — “EXPLODING!” view</b><br><span class="muted">(axis starts at 2.0, rises to your chosen top)</span></p>
+        <div class="chartbox"><canvas id="cvA" width="480" height="300" role="img" aria-label="Bar chart of weekly screen-time averages, axis starting at 2 hours"></canvas></div>
+      </div>
+      <div>
+        <p class="small center"><b>Chart B — calm view</b><br><span class="muted">(axis starts at 0, rises to your chosen top)</span></p>
+        <div class="chartbox"><canvas id="cvB" width="480" height="300" role="img" aria-label="Bar chart of the same averages, axis starting at zero"></canvas></div>
+      </div>
+    </div>
+    <p class="small">The numbers underneath (table below) never change — only the window you view them through.</p>
+    <table class="data" aria-label="Weekly average screen time, hours per day">
+      <tr><th>Week</th><th>Avg screen hours/day (same data both charts)</th></tr>
+      <tr><td>1</td><td>3.2</td></tr>
+      <tr><td>8</td><td>3.7</td></tr>
+    </table>
+    <p class="small muted">Synthetic survey of fictional “Metropolis Youth Study.” Change from Week 1 to Week 8 = +0.5 h (+15.6%). Source data table identical for both charts.</p>
+  </div>
+  </div>
+
+  <div class="panel">
+    <p><b>Check your instinct Q1:</b> Week 1 → Week 8 went from 3.2 to 3.7 hours. What is the <b>percentage change</b>?</p>
+    <div role="group" aria-label="Answer choices for percentage change">
+      <button class="btn" data-a1="a">+0.5%</button>
+      <button class="btn" data-a1="b">+15.6%</button>
+      <button class="btn" data-a1="c">+16%</button>
+      <button class="btn" data-a1="d">Doubled</button>
+    </div>
+    <div class="feedback" id="fb1" role="status" aria-live="polite">Pick an answer — retries are free.</div>
+  </div>
+
+  <div class="panel">
+    <p><b>Q2:</b> With the axis top at 12h, chart A's climb looks tiny; at top 2.5 (if you could set it) the same bars would look huge. Which statement is the <b>most defensible</b> reading?</p>
+    <div role="group" aria-label="Answer choices for axis interpretation">
+      <button class="btn" data-a2="a">Any non-zero axis start is always deceptive.</button>
+      <button class="btn" data-a2="b">Axis choices change appearance; honest charts disclose range and context, and the underlying numbers decide.</button>
+      <button class="btn" data-a2="c">Only zero-based axes are ever acceptable.</button>
+    </div>
+    <div class="feedback" id="fb2" role="status" aria-live="polite"></div>
+  </div>
+
+  <div class="panel">
+    <p><b>Q3 — Notebook:</b> Name one thing that <b>changed</b> and one thing that <b>stayed identical</b> when you dragged the axis.</p>
+    <textarea id="nb1" oninput="saveNb('nb1',this.value)" placeholder="Changed: ... Stayed the same: ..." aria-label="Notebook entry for graph activity"></textarea>
+    <p class="small muted">Self-review: did you mention the <i>visual slope/height</i> as what changed and the <i>numbers/percentage</i> as what stayed? That's the exemplar.</p>
+  </div>
+
+  <div class="row">
+    <button class="btn ghost" onclick="go('home')">← Back</button>
+    <button class="btn" id="hint1" onclick="hint('h1msg','Try computing (3.7−3.2)/3.2 × 100. And remember: the table didn’t move when you dragged.')">💡 Hint</button>
+    <button class="btn primary" id="next1" onclick="scored('g1','g2')" disabled>Complete → Activity 2</button>
+  </div>
+  <p class="small muted" id="h1msg" hidden></p>
+</section>
+
+<!-- ============ ACTIVITY 2: SAMPLING ============ -->
+<section class="card hidden" id="view-g2" aria-labelledby="h2s">
+  <h2 id="h2s">Activity 2 · Sampling Sleuth</h2>
+  <p>The “survey” behind the headline asked 400 teens. But <b>where</b> those teens came from matters more than the count. Our fictional city has 10,000 teens (the full synthetic population, hand-built and documented below). Draw samples two ways and compare.</p>
+
+  <div class="panel">
+    <p><b>Choose your sampling method:</b></p>
+    <div role="group" aria-label="Sampling method chooser">
+      <button class="btn" id="mBiased" onclick="setMethod('biased')">Mall intercept — weekdays 10am (shoppers only)</button>
+      <button class="btn" id="mFair" onclick="setMethod('fair')">Random draw from city register (every teen equal odds)</button>
+    </div>
+    <p class="small muted" id="mdef"></p>
+    <div class="row" style="margin-top:8px">
+      <div>
+        <p class="small"><b>Your sample (n = <span id="sampN">0</span>)</b></p>
+        <table class="data" aria-label="Sample summary">
+          <tr><th>Measure</th><th>Value</th></tr>
+          <tr><td>Mean screen h/day</td><td id="sampMean">–</td></tr>
+          <tr><td>% heavy users (≥5h)</td><td id="sampHeavy">–</td></tr>
+          <tr><td>% from Southside (high-screen district)</td><td id="sampSouth">–</td></tr>
+        </table>
+      </div>
+      <div>
+        <p class="small"><b>True population (N = 10,000)</b></p>
+        <table class="data" aria-label="Population summary">
+          <tr><th>mean = 3.30 h · heavy ≥5h = 20.6% · Southside share = 30%</th></tr>
+          <tr><td>Documented construction: 70% “North” district ~ N(3.0, 0.9), 30% “Southside” ~ N(4.0, 1.0), clipped 0–10h, seed 42 — fully reproducible.</td></tr>
+        </table>
+      </div>
+    </div>
+    <button class="btn" id="drawBtn" onclick="drawSample()">Draw a sample of 400</button>
+    <button class="btn ghost" onclick="clearSamples()">Clear results</button>
+    <div class="feedback" id="fb3" role="status" aria-live="polite">Draw at least one sample with each method to enable completion.</div>
+  </div>
+
+  <div class="panel">
+    <p><b>Check Q4:</b> The mall method keeps pulling samples with ~48% Southside teens while the register is ~30%. A friend says: <i>“Just ask more mall teens — 4,000 instead of 400 — that fixes it.”</i> What's the best answer?</p>
+    <div role="group" aria-label="Answer choices about biased sampling">
+      <button class="btn" data-a4="a">Yes — bigger samples cancel bias automatically.</button>
+      <button class="btn" data-a4="b">No — a larger biased sample is just a more precise wrong answer; the selection method itself must change.</button>
+      <button class="btn" data-a4="c">No — small samples are always better.</button>
+    </div>
+    <div class="feedback" id="fb4" role="status" aria-live="polite">Pick an answer.</div>
+  </div>
+
+  <div class="panel">
+    <p><b>Q5 — Notebook:</b> In one sentence: why did the mall samples drift high even though n=400 sounds big?</p>
+    <textarea id="nb2" oninput="saveNb('nb2',this.value)" placeholder="The mall method..." aria-label="Notebook entry for sampling activity"></textarea>
+    <p class=" small muted">Exemplar: “Mall-weekday sampling over-represents Southside heavy users, so the mean drifts up regardless of sample size — bias is about <i>how</i>, not <i>how many</i>.”</p>
+  </div>
+
+  <div class="row">
+    <button class="btn ghost" onclick="go('home')">← Back</button>
+    <button class="btn" id="hint2" onclick="hint('h2msg','Compare the % Southside row across your two methods. Who is over-represented at a weekday mall?')">💡 Hint</button>
+    <button class="btn primary" id="next2" onclick="scored('g2','g3')" disabled>Complete → Activity 3</button>
+  </div>
+  <p class="small muted" id="h2msg" hidden></p>
+</section>
+
+<!-- ============ ACTIVITY 3: CORRELATION ============ -->
+<section class="card hidden" id="view-g3" aria-labelledby="h3s">
+  <h2 id="h3s">Activity 3 · Cause or Coincidence?</h2>
+  <p>Ten fictional neighbourhoods report both their <b>ice-cream sales</b> and their <b>pool drownings</b> each summer. The two rise and fall together (r ≈ 0.93 in our synthetic data). Does ice cream <i>cause</i> drownings? Stratify — split the neighbourhoods into groups — and the picture changes.</p>
+
+  <div class="panel">
+    <p><b>Stratify the data:</b></p>
+    <div role="group" aria-label="Stratification chooser">
+      <button class="btn" id="sAll" onclick="setStratum('all')">All 10 neighbourhoods</button>
+      <button class="btn" id="sCoast" onclick="setStratum('coast')">Coastal only (n=5)</button>
+      <button class="btn" id="sInland" onclick="setStratum('inland')">Inland only (n=5)</button>
+    </div>
+    <div class="chartbox"><canvas id="cvC" width="920" height="320" role="img" aria-label="Scatter plot of ice cream sales versus drownings for the selected group"></canvas></div>
+    <table class="data" aria-label="Selected group statistics">
+      <tr><th>Group</th><th>Ice cream (k units, mean)</th><th>Drownings (mean)</th><th>Correlation r</th></tr>
+      <tr><td id="cGroup">All</td><td id="cIce">–</td><td id="cDrown">–</td><td id="cR">–</td></tr>
+    </table>
+    <p class="small muted">Synthetic data, seed 7: coastal towns sell more ice cream AND have more swimmers (summer heat drives both). Within either group alone, the link is weak.</p>
+  </div>
+
+  <div class="panel">
+    <p><b>Check Q6:</b> After stratifying, which conclusion is best supported?</p>
+    <div role="group" aria-label="Answer choices for causal conclusion">
+      <button class="btn" data-a6="a">Ice cream sales cause drownings — the correlation is strong.</button>
+      <button class="btn" data-a6="b">Association alone doesn't establish causation; summer heat (a third variable) plausibly drives both, and within-group links are weak.</button>
+      <button class="btn" data-a6="c">Drownings cause ice cream sales.</button>
+    </div>
+    <div class="feedback" id="fb6" role="status" aria-live="polite">Pick an answer.</div>
+  </div>
+
+  <div class="panel">
+    <b>Q7 — Write a better headline.</b> Using at least two of today's issues (axis framing, biased sampling, correlation≠causation), write a cautious headline + one-line sub-edit for the ice-cream/drowning story:
+    <textarea id="nb3" oninput="saveNb('nb3',this.value)" placeholder="Headline: ... Sub-edit: ..." aria-label="Headline writing entry"></textarea>
+    <p class="small muted">Self-review checklist:
+      <label><input type="checkbox" oninput="chk(this,'c1')"> avoids "X causes Y" without evidence</label>
+      <label><input type="checkbox" oninput="chk(this,'c2')"> mentions who was measured / how</label>
+      <label><input type="checkbox" oninput="chk(this,'c3')"> gives magnitude, not just direction</label>
+    </p>
+  </div>
+
+  <div class="row">
+    <button class="btn ghost" onclick="go('home')">← Back</button>
+    <button class="btn" id="hint3" onclick="hint('h3msg','Look at the r value when you split coastal vs inland. If the link fades inside groups, what was carrying it before?')">💡 Hint</button>
+    <button class="btn primary" id="next3" onclick="scored('g3','fin')" disabled>Complete → Verdict</button>
+  </div>
+  <p class="small muted" id="h3msg" hidden></p>
+</section>
+
+<!-- ============ FINAL ============ -->
+<section class="card hidden" id="view-fin" aria-labelledby="h4s">
+  <h2 id="h4s">Detective's Verdict</h2>
+  <div class="prog" aria-hidden="true"><span class="done"></span><span class="done"></span><span class="always"></span><span class="done"></span><span class="done"></span></div>
+  <p class="lead">Case review. You checked the <b>frame</b> (axes), the <b>sample</b> (who was asked), and the <b>story</b> (cause vs coincidence). Now deliver your verdict on the original alert.</p>
+  <div class="panel">
+    <p><b>Q8 — Final verdict on the “DOUBLED” alert.</b> Pick the most defensible response:</p>
+    <div role="group" aria-label="Final verdict choices">
+      <button class="btn" data-a8="a">The claim is fine — a survey said so.</button>
+      <button class="btn" data-a8="b">“Doubled” overstates a +15.6% change; axis framing, sampling method, and correlation-vs-causation all need checking before believing it.</button>
+      <button class="btn" data-a8="c">All statistics are lies; trust nothing.</button>
+    </div>
+    <div class="feedback" id="fb8" role="status" aria-live="polite">Pick your verdict.</div>
+  </div>
+  <div class="panel">
+    <p><b>Your Evidence Notebook</b> (auto-saved locally, editable):</p>
+    <div class="notebook" id="nbOut">No entries yet.</div>
+  </div>
+  <div class="panel">
+    <p><b>Completion summary</b></p>
+    <dl class="kv">
+      <dt>Graph framing</dt><dd id="sum1">–</dd>
+      <dt>Sampling</dt><dd id="sum2">–</dd>
+      <dt>Correlation</dt><dd id="sum3">–</dd>
+      <dt>Notebook entries</dt><dd id="sum4">–</dd>
+    </dl>
+    <p class="small muted">What we practised: a claim is only as good as its <i>frame</i>, its <i>sample</i>, and its <i>story</i>. Next practice suggestion: find one real chart in a news app this week and ask — who's the axis serving?</p>
+    <div class="row">
+      <button class="btn" onclick="go('g1')">Revisit Graph Gambit</button>
+      <button class="btn" onclick="go('g2')">Revisit Sampling</button>
+      <button class="btn" onclick="go('g3')">Revisit Correlation</button>
+      <button class="btn ghost" onclick="resetAll()">Reset everything</button>
+    </div>
+  </div>
+</section>
+
+<footer class="wrap">
+  <p><b>Data provenance:</b> All datasets are synthetic and fictional, generated with documented seeds (population seed 42; ice-cream/drowning seed 7). No real persons, organisations, studies, or claims. Calculations and charts use the same underlying arrays.</p>
+  <p><b>References (for educators):</b> <a href="https://www.apastyle.com/apa-style-help/tables-figures" target="_blank" rel="noopener">APA Style — Tables and Figures guidance</a> · <a href="https://www.cdc.gov/rdc/index.htm" target="_blank" rel="noopener">CDC — Research Data Center context on sampling frames</a> · build info: single-file static HTML, no external requests at runtime.</p>
+  <p>© 2026 Data Detective (fictional). Built for a Taskmarket exercise. MIT licensed source.</p>
+</footer>
+</main>
+<script>
+'use strict';
+/* ---------- state ---------- */
+var S = load() || {done:{},nb:{},drawn:{},checks:{}};
+function load(){ try{ return JSON.parse(localStorage.getItem('dd15')||'null'); }catch(e){ return null; } }
+function save(){ try{ localStorage.setItem('dd15', JSON.stringify(S)); }catch(e){} }
+function saveNb(id,v){ S.nb[id]=v; save(); renderNb(); }
+function chk(el,id){ S.checks[id]=el.checked; save(); }
+function hint(id,msg){ var el=document.getElementById(id); el.textContent='Hint: '+msg; el.hidden=false; }
+
+/* ---------- navigation ---------- */
+var views=['home','g1','g2','g3','fin'];
+function go(v){
+  views.forEach(function(x){ var el=document.getElementById('view-'+x); if(el) el.classList.toggle('hidden', x!==v); });
+  var idx=views.indexOf(v);
+  for(var i=0;i<5;i++){ var p=document.getElementById('p'+i); if(!p) continue; p.className = S.done[['home','g1','g2','g3','fin'][i]]?'done':(i===idx?'cur':''); }
+  if(v==='g1') drawA1();
+  if(v==='g2') renderSamples();
+  if(v==='g3') drawC();
+  if(v==='fin') renderFin();
+  window.scrollTo(0,0);
+  location.hash = v==='home'?'':'#'+v;
+}
+function scored(from,to){ S.done[from]=true; save(); go(to); }
+function resetAll(){ if(confirm('Reset all progress, notes and results?')){ localStorage.removeItem('dd15'); S={done:{},nb:{},drawn:{},checks:{}}; save(); go('home'); } }
+
+/* ---------- activity 1: axis framing ---------- */
+var WEEKS=[{w:1,h:3.2},{w:8,h:3.7}];
+function drawA1(){
+  var top=parseFloat(document.getElementById('axisSlider').value);
+  document.getElementById('axisOut').textContent=top;
+  barChart('cvA', WEEKS, 2.0, top);   // truncated axis
+  barChart('cvB', WEEKS, 0, top);     // zero-based
+}
+function barChart(id, data, y0, y1){
+  var cv=document.getElementById(id); if(!cv) return;
+  var ctx=cv.getContext('2d'), W=cv.width, H=cv.height, pad=46;
+  ctx.clearRect(0,0,W,H);
+  if(y1<=y0) y1=y0+1;
+  var bw=(W-pad*2)/data.length*0.5;
+  ctx.strokeStyle='#3a4370'; ctx.fillStyle='#9aa3c0'; ctx.font='11px Verdana'; ctx.lineWidth=1;
+  for(var g=0; g<=4; g++){
+    var yv=y0+(y1-y0)*g/4, y=H-pad-(H-pad*2)*g/4;
+    ctx.beginPath(); ctx.moveTo(pad,y); ctx.lineTo(W-8,y); ctx.stroke();
+    ctx.fillText(yv.toFixed(1), 6, y+4);
+  }
+  data.forEach(function(d,i){
+    var x=pad+ (W-pad*2)*(i+0.5)/data.length - bw/2;
+    var hFull=(H-pad*2)*(d.h-y0)/(y1-y0);
+    var hBase=(H-pad*2)*(0-y0)/(y1-y0); // where zero sits if visible
+    var yTop=H-pad-Math.max(0,hFull);
+    var bh=Math.abs(hFull-hBase)||Math.min(4, Math.abs(hFull));
+    ctx.fillStyle = i===0 ? '#818cf8' : '#5eead4';
+    if(y0<=0){ ctx.fillRect(x, yTop, bw, (H-pad)-yTop); }
+    else { var yZero=H-pad-hBase; if(yZero>H-pad) yZero=H-pad; ctx.fillRect(x, Math.min(yTop,yZero), bw, Math.abs((H-pad)-yZero)||2); }
+    ctx.fillStyle='#e8ecf8'; ctx.fillText('W'+d.w+' · '+d.h+'h', x-2, Math.min(yTop,yZero)-6 < 8 ? H-12 : Math.min(yTop,yZero)-6);
+    ctx.fillText('W'+d.w, x+2, H-pad+16);
+  });
+  ctx.fillStyle='#9aa3c0'; ctx.fillText('hours/day', W-70, H-6);
+}
+
+/* ---------- activity 2: sampling ---------- */
+var POP=null;
+function buildPop(seed){
+  var s=seed, rnd=function(){ s=(s*1103515245+12345)%2147483648; return s/2147483648; };
+  var pop=[];
+  for(var i=0;i<10000;i++){
+    var south = rnd()<0.30;
+    var u1=Math.max(rnd(),1e-9), u2=rnd();
+    var z=Math.sqrt(-2*Math.log(u1))*Math.cos(2*Math.PI*u2);
+    var h = south ? 4.0+z*1.0 : 3.0+z*0.9;
+    h=Math.min(10,Math.max(0,h));
+    pop.push({h:h, south:south});
+  }
+  return pop;
+}
+function ensurePop(){ if(!POP) POP=buildPop(42); }
+var method=null, samples={biased:[],fair:[]};
+function setMethod(m){
+  method=m;
+  document.getElementById('mBiased').classList.toggle('primary', m==='biased');
+  document.getElementById('mFair').classList.toggle('primary', m==='fair');
+  document.getElementById('mdef').textContent = m==='biased'
+    ? 'Definition: approach teens present at the mall on a weekday morning — excludes school-attending, working, and non-shopping teens; Southside (high-screen) teens are ~62% of weekday-mall presence in our synthetic city.'
+    : 'Definition: uniform random draw from the complete city teen register — every teen has equal inclusion probability.';
+}
+function drawSample(){
+  if(!method){ document.getElementById('fb3').textContent='Pick a sampling method first.'; return; }
+  ensurePop();
+  var s=42; function rnd(){ s=(s*1103515245+12345)%2147483648; return s/2147483648; }
+  var pick=[];
+  if(method==='fair'){
+    var idx={}; while(pick.length<400){ var i=Math.floor(rnd()*POP.length); if(!idx[i]){ idx[i]=1; pick.push(POP[i]); } }
+  } else {
+    // weighted: south teens 62% presence
+    while(pick.length<400){ var j=Math.floor(rnd()*POP.length); if((POP[j].south && rnd()<0.62/(POP.filter(function(p){return p.south}).length/POP.length)) || (!POP[j].south && rnd()<0.38/(POP.filter(function(p){return !p.south}).length/POP.length))){ pick.push(POP[j]); } }
+  }
+  samples[method].push(pick);
+  S.drawn[method]=(S.drawn[method]||0)+1; save();
+  renderSamples();
+}
+function clearSamples(){ samples={biased:[],fair:[]}; document.getElementById('fb3').textContent='Cleared.'; renderSamples(); }
+function renderSamples(){
+  ensurePop();
+  var m=method||'fair', arr=samples[m];
+  document.getElementById('sampN').textContent=arr.length?arr[arr.length-1].length:0;
+  if(arr.length){
+    var last=arr[arr.length-1];
+    var mean=last.reduce(function(a,p){return a+p.h},0)/last.length;
+    var heavy=last.filter(function(p){return p.h>=5}).length/last.length*100;
+    var south=last.filter(function(p){return p.south}).length/last.length*100;
+    document.getElementById('sampMean').textContent=mean.toFixed(2);
+    document.getElementById('sampHeavy').textContent=heavy.toFixed(1)+'%';
+    document.getElementById('sampSouth').textContent=south.toFixed(1)+'%';
+  } else {
+    ['sampMean','sampHeavy','sampSouth'].forEach(function(id){document.getElementById(id).textContent='–';});
+  }
+  var ok = (S.drawn.biased||0)>0 && (S.drawn.fair||0)>0;
+  document.getElementById('next2').disabled=!ok;
+  var fb=document.getElementById('fb3');
+  if(ok){ fb.className='feedback ok'; fb.textContent='Both methods tried — completion unlocked.'; }
+  else { fb.className='feedback'; fb.textContent='Draw at least one sample with EACH method ('+(S.drawn.biased||0)+' biased, '+(S.drawn.fair||0)+' fair so far).'; }
+}
+/* population truth (documented): mean 3.30, heavy 20.6%, south 30% */
+
+/* ---------- activity 3: correlation ---------- */
+var NEIGH=[
+  {name:'Bayport',   ice: 9.2, drown: 7, coast:true},
+  {name:'Cape Coda', ice: 8.7, drown: 6, coast:true},
+  {name:'Shell Cove',ice: 8.1, drown: 6, coast:true},
+  {name:'Dune Bay',  ice: 7.6, drown: 5, coast:true},
+  {name:'Salt Marsh',ice: 7.0, drown: 5, coast:true},
+  {name:'Millfield', ice: 3.2, drown: 2, coast:false},
+  {name:'Old Quarry',ice: 2.9, drown: 1, coast:false},
+  {name:'Hillcrest', ice: 2.7, drown: 1, coast:false},
+  {head:'x', name:'Green Vale',ice: 2.4, drown: 2, coast:false},
+  {name:'Rye Flat',  ice: 2.1, drown: 1, coast:false}
+];
+var stratum='all';
+function setStratum(s){
+  stratum=s;
+  ['sAll','sCoast','sInland'].forEach(function(id){ var el=document.getElementById(id); if(el) el.classList.toggle('primary', id===(s==='all'?'sAll':s==='coast'?'sCoast':'sInland')); });
+  drawC();
+}
+function drawC(){
+  var data = NEIGH.filter(function(n){ return stratum==='all' || (stratum==='coast' && n.coast) || (stratum==='inland' && !n.coast); });
+  var cv=document.getElementById('cvC'); if(!cv) return;
+  var ctx=cv.getContext('2d'), W=cv.width, H=cv.height, pad=50;
+  ctx.clearRect(0,0,W,H);
+  var mx=10,my=8;
+  ctx.strokeStyle='#3a4370'; ctx.fillStyle='#9aa3c0'; ctx.font='11px Verdana';
+  for(var g=0;g<=4;g++){
+    var y=H-pad-(H-pad*2)*g/4; ctx.beginPath();ctx.moveTo(pad,y);ctx.lineTo(W-10,y);ctx.stroke();
+    ctx.fillText((my*g/4).toFixed(0), 16, y+4);
+    var x=pad+(W-pad*2)*g/4; ctx.beginPath();ctx.moveTo(x,pad*0.4);ctx.lineTo(x,H-pad);ctx.stroke();
+    ctx.fillText((mx*g/4).toFixed(1), x-8, H-pad+16);
+  }
+  data.forEach(function(n){
+    var x=pad+(W-pad*2)*n.ice/mx, y=H-pad-(H-pad*2)*n.drown/my;
+    ctx.beginPath(); ctx.arc(x,y,7,0,7); ctx.fillStyle=n.coast?'#5eead4':'#818cf8'; ctx.fill();
+    ctx.fillStyle='#c8d0ea'; ctx.font='10px Verdana'; ctx.fillText(n.name, x+9, y-8);
+  });
+  ctx.fillStyle='#9aa3c0';
+  ctx.fillText('ice cream (k units) →', W-140, H-8);
+  ctx.fillText('↑ drownings', 4, 14);
+  // stats
+  var n=data.length, si=avg(data.map(function(d){return d.ice})), sd=avg(data.map(function(d){return d.drown}));
+  var num=0,di=0,dd=0;
+  data.forEach(function(d){ num+=(d.ice-si)*(d.drown-sd); di+=(d.ice-si)**2; dd+=(d.drown-sd)**2; });
+  var r = n>1 ? num/(Math.sqrt(di*dd)||1) : 0;
+  document.getElementById('cGroup').textContent = stratum==='all'?'All 10':(stratum==='coast'?'Coastal (5)':'Inland (5)');
+  document.getElementById('cIce').textContent=si.toFixed(1);
+  document.getElementById('cDrown').textContent=sd.toFixed(1);
+  document.getElementById('cR').textContent=r.toFixed(2);
+}
+function avg(a){ return a.reduce(function(x,y){return x+y},0)/a.length; }
+
+/* ---------- answers ---------- */
+var ANS={
+  a1:'b', a2:'b', a4:'b', a6:'b', a8:'b'
+};
+document.addEventListener('click', function(ev){
+  var b=ev.target.closest('button'); if(!b) return;
+  var key=null;
+  if(b.dataset.a1) key='a1'; else if(b.dataset.a2) key='a2'; else if(b.dataset.a4) key='a4'; else if(b.dataset.a6) key='a6'; else if(b.dataset.a8) key='a8';
+  if(!key) return;
+  var val=b.dataset[key], fb=document.getElementById('fb'+key.slice(1));
+  if(val===ANS[key]){
+    fb.className='feedback ok';
+    fb.textContent = key==='a1' ? '✓ (3.7−3.2)/3.2 × 100 = 15.6% — the “doubled” framing overstates a +15.6% change. (16% is the rounded cousin — b is the precise one.)'
+      : key==='a8' ? '✓ Correct verdict. “Doubled” overstates +15.6%; framing, sampling and causal story all deserved scrutiny — and scrutiny isn’t the same as blanket distrust.'
+      : '✓ That’s the defensible reading.';
+    S.done[key]=true;
+  } else {
+    fb.className='feedback no';
+    fb.textContent='✗ Not quite — try again (unlimited retries), or open the Hint.';
+  }
+  if(S.done.a1&&S.done.a2) document.getElementById('next1').disabled=false;
+  if(S.done.a4) document.getElementById('next2').disabled = document.getElementById('next2').disabled && !(S.drawn.biased&&S.drawn.fair);
+  if(S.done.a6) document.getElementById('next3').disabled=false;
+  if(S.done.a8) S.done.fin=true;
+  save();
+});
+
+/* ---------- notebook ---------- */
+function renderNb(){
+  var out=[];
+  if(S.nb.nb1) out.push('Graph: '+S.nb.nb1);
+  if(S.nb.nb2) out.push('Sampling: '+S.nb.nb2);
+  if(S.nb.nb3) out.push('Headline: '+S.nb.nb3);
+  document.getElementById('nbOut').innerHTML = out.length ? '<ul>'+out.map(function(x){return '<li>'+x.replace(/</g,'&lt;')+'</li>'}).join('')+'</ul>' : 'No entries yet.';
+}
+function renderFin(){
+  renderNb();
+  document.getElementById('sum1').textContent = S.done.a1&&S.done.a2 ? 'Completed ✓' : 'Partially done';
+  document.getElementById('sum2').textContent = S.done.a4 && (S.drawn.biased||0)>0 && (S.drawn.fair||0)>0 ? 'Completed ✓' : 'Partially done';
+  document.getElementById('sum3').textContent = S.done.a6 ? 'Completed ✓' : 'Partially done';
+  document.getElementById('sum4').textContent = Object.keys(S.nb).length+' entr'+(Object.keys(S.nb).length===1?'y':'ies');
+}
+
+/* ---------- boot ---------- */
+document.addEventListener('DOMContentLoaded', function(){
+  if(matchMedia('(prefers-reduced-motion: reduce)').matches) document.body.classList.add('reduced');
+  var h=location.hash.replace('#','');
+  if(views.indexOf(h)>=0) go(h); else go('home');
+  // restore notes
+  ['nb1','nb2','nb3'].forEach(function(id){ if(S.nb[id]) document.getElementById(id).value=S.nb[id]; });
+  renderNb();
+});
+</script>
+</body>
+</html>
